@@ -27,9 +27,9 @@ For each structurally selected competition:
 3. Export a complete Public rank prefix beginning at rank 1. Record every scanned team's team name, member handles, Public rank, Public score, and official Solution link when present. Never export only the qualifying rows.
 4. Continue until five provisional teams with official Solution links are found. Do not stop at rank 10.
 5. Inspect the **Private** leaderboard independently from rank 1 downward and export its complete rank prefix until five qualifying teams are found.
-6. Extend the Private prefix through the Private rank of every provisional Public selection, and extend the Public prefix through the Public rank of every provisional Private selection. Keep both exports complete from rank 1. This closure step prevents an incomplete opposite-board export from silently replacing a higher-ranked writeup with a lower-ranked one.
-7. Join the two tables by stable team identity. Prefer Kaggle team ID when available; otherwise use the exact team name plus sorted member handles. Never join by rank.
-8. Record both ranks and both scores for every qualifying team. If either cross-rank cannot be verified, stop and extend or recheck the evidence; do not substitute a lower-ranked writeup.
+6. Lock both provisional selections before resolving cross-ranks. For each Public selection, verify its Private rank on the official Private tab; for each Private selection, verify its Public rank on the official Public tab. Store that reviewed cross-rank on the selected row. When the counterpart is already inside the opposite complete prefix, include and join that row as well.
+7. Join rows by stable team identity. Prefer Kaggle team ID when available; otherwise use the exact team name plus sorted member handles. Never join by rank. A counterpart outside the exported opposite prefix must keep the same reviewed team identity on the selected row.
+8. Record both ranks and both scores when available for every qualifying team. If either cross-rank cannot be verified, stop and recheck the official evidence; do not substitute a lower-ranked writeup.
 9. Deduplicate the union of the Public and Private selections before opening writeups.
 10. Read only those unique official writeups. Extract source-stated facts into the structured fields in `catalog-schema.md`.
 11. Follow links from an admitted writeup to code/notebooks/repositories only when needed. These links are supporting artifacts; they do not replace the official writeup.
@@ -60,7 +60,7 @@ python3 scripts/catalog.py ingest-jsonl \
   --input /absolute/path/to/reviewed_records.jsonl
 ```
 
-The preparation script independently sorts both boards, requires each export to be a complete rank prefix starting at rank 1, ignores every vote/popularity field, validates official same-competition leaderboard and writeup routes, joins cross-ranks by stable team identity, selects five per board, and emits overlap only once.
+The preparation script independently sorts both boards, requires each export to be a complete rank prefix starting at rank 1, validates official same-competition leaderboard and writeup routes, locks five selections per board before resolving cross-ranks, joins available counterpart rows by stable team identity, and emits overlap only once.
 
 ## Analysis fields
 

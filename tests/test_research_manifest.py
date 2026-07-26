@@ -218,7 +218,7 @@ class ManifestSelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ManifestError, "do not substitute"):
             prepare_manifest(payload)
 
-    def test_opposite_prefix_must_extend_through_provisional_top_five(self):
+    def test_cross_rank_outside_opposite_prefix_does_not_change_top_five(self):
         payload = competition_payload()
         pairs = [
             board_row(1, 1, 6),
@@ -233,10 +233,6 @@ class ManifestSelectionTests(unittest.TestCase):
             pair[1] for pair in pairs if pair[1]["private_rank"] <= 5
         ]
 
-        with self.assertRaisesRegex(ManifestError, "Extend the complete Private"):
-            prepare_manifest(payload)
-
-        payload["private_leaderboard"].append(pairs[0][1])
         _, report = prepare_manifest(payload)
 
         self.assertEqual(
@@ -247,6 +243,35 @@ class ManifestSelectionTests(unittest.TestCase):
             [item["private_rank"] for item in report["private_selection"]],
             [1, 2, 3, 4, 5],
         )
+        public_first = report["public_selection"][0]
+        self.assertEqual(public_first["team_id"], "team-1")
+        self.assertEqual(public_first["private_rank"], 6)
+        self.assertEqual(
+            report["scan_proof"]["private_complete_prefix_through_rank"],
+            5,
+        )
+
+    def test_missing_cross_rank_blocks_manifest_without_backfilling(self):
+        payload = competition_payload()
+        pairs = [
+            board_row(1, 1, 6),
+            board_row(2, 2, 1),
+            board_row(3, 3, 2),
+            board_row(4, 4, 3),
+            board_row(5, 5, 4),
+            board_row(6, 6, 5),
+        ]
+        pairs[0][0].pop("private_rank")
+        payload["public_leaderboard"] = [pair[0] for pair in pairs]
+        payload["private_leaderboard"] = [
+            pair[1] for pair in pairs if pair[1]["private_rank"] <= 5
+        ]
+
+        with self.assertRaisesRegex(
+            ManifestError,
+            "Public rank 1.*do not substitute",
+        ):
+            prepare_manifest(payload)
 
     def test_optional_analysis_is_copied_without_promoting_inference_to_fact(self):
         payload = competition_payload()

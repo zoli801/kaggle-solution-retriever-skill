@@ -39,15 +39,14 @@ The input is one JSON object with this shape:
 }
 
 Each board export must contain a complete rank prefix beginning at rank 1 and is
-sorted by its own rank before selection. A team is eligible only when the same
-identity is present on both boards, both ranks are positive, and a leaderboard
-row contains an official same-competition Kaggle /writeups/ URL. The first five
-eligible teams on each board are selected independently. If a prefix produces
+sorted by its own rank before selection. The first five teams with an official
+same-competition Kaggle /writeups/ URL are selected independently on each board.
+Each selected row must also contain its reviewed opposite-board rank, or the
+same identity must appear in the opposite prefix. A counterpart outside the
+opposite prefix never changes the own-board selection. If a prefix produces
 fewer than five, the corresponding *_scan_exhausted flag must attest that no
 more leaderboard rows are available. Overlap is emitted once as one
-leaderboard_team plus one canonical solution record. Each opposite-board prefix
-must also extend through every provisional selection's cross-rank; missing
-cross-evidence is an error and never causes substitution by a lower rank.
+leaderboard_team plus one canonical solution record.
 
 Votes, upvotes, likes, and similar popularity fields are never read.
 """
@@ -169,14 +168,22 @@ class BoardRow:
 
 
 @dataclass(frozen=True)
+class BoardSelection:
+    """One team selected solely from its own leaderboard prefix."""
+
+    row: BoardRow
+    writeup_url: str
+
+
+@dataclass(frozen=True)
 class Candidate:
     """One verified cross-board team with an official writeup route."""
 
     team_id: str
     team_name: str
     member_handles: Tuple[str, ...]
-    public_row: BoardRow
-    private_row: BoardRow
+    public_row: Optional[BoardRow]
+    private_row: Optional[BoardRow]
     public_rank: int
     private_rank: int
     public_score: str
@@ -447,69 +454,83 @@ def _row_match_candidates(
     return fallback_matches
 
 
-def _cross_rank_is_consistent(
-    public_row: BoardRow,
-    private_row: BoardRow,
-) -> bool:
-    public_cross = public_row.raw.get("private_rank")
-    private_cross = private_row.raw.get("public_rank")
-    if public_cross not in (None, ""):
-        parsed = _positive_rank(public_cross)
-        if parsed is None or parsed != private_row.own_rank:
-            return False
-    if private_cross not in (None, ""):
-        parsed = _positive_rank(private_cross)
-        if parsed is None or parsed != public_row.own_rank:
-            return False
-    return True
-
-
-def _candidate_for_row(
-    row: BoardRow,
+def _candidate_for_selection(
+    selection: BoardSelection,
     other_rows: Sequence[BoardRow],
     competition_id: str,
     competition_slug: str,
 ) -> Tuple[Optional[Candidate], str]:
+    row = selection.row
+    opposite_board = "private" if row.board == "public" else "public"
+    cross_field = f"{opposite_board}_rank"
+    raw_cross_rank = row.raw.get(cross_field)
+    explicit_cross_rank: Optional[int] = None
+    if raw_cross_rank not in (None, ""):
+        explicit_cross_rank = _positive_rank(raw_cross_rank)
+        if explicit_cross_rank is None:
+            return None, f"invalid {cross_field}"
+
     matches = _row_match_candidates(row, other_rows)
-    if not matches:
-        return None, "no cross-board identity"
     if len(matches) != 1:
-        return None, "ambiguous cross-board identity"
-    other = matches[0]
+        if matches:
+            return None, "ambiguous cross-board identity"
+        other: Optional[BoardRow] = None
+    else:
+        other = matches[0]
+
+    if other is not None:
+        if explicit_cross_rank is not None and explicit_cross_rank != other.own_rank:
+            return None, "conflicting cross-board rank"
+        cross_rank = other.own_rank
+    elif explicit_cross_rank is not None:
+        cross_rank = explicit_cross_rank
+        claimed_rank_rows = [
+            candidate
+            for candidate in other_rows
+            if candidate.own_rank == explicit_cross_rank
+        ]
+        if claimed_rank_rows:
+            return None, "cross-rank belongs to a different team identity"
+    else:
+        return None, f"missing verified {cross_field}"
+
     public_row = row if row.board == "public" else other
     private_row = row if row.board == "private" else other
-    if not _cross_rank_is_consistent(public_row, private_row):
-        return None, "conflicting cross-board rank"
-
-    canonical_urls = {
-        candidate
-        for candidate in (
-            _official_writeup_url(public_row.raw.get("writeup_url"), competition_slug),
-            _official_writeup_url(private_row.raw.get("writeup_url"), competition_slug),
+    supplied_ids = {
+        item
+        for item in (
+            row.team_id,
+            other.team_id if other is not None else "",
         )
-        if candidate
+        if item
     }
-    if not canonical_urls:
-        return None, "no official same-competition writeup URL"
-    if len(canonical_urls) > 1:
-        return None, "conflicting official writeup URLs"
-
-    supplied_ids = {item for item in (public_row.team_id, private_row.team_id) if item}
     if len(supplied_ids) > 1:
         return None, "conflicting team IDs"
-    team_name = public_row.team_name or private_row.team_name
-    member_handles = public_row.member_handles or private_row.member_handles
+    team_name = row.team_name or (other.team_name if other is not None else "")
+    member_handles = row.member_handles or (
+        other.member_handles if other is not None else ()
+    )
     team_id = (
         next(iter(supplied_ids))
         if supplied_ids
         else _fallback_team_id(competition_id, team_name, member_handles)
     )
 
+    public_rank = row.own_rank if row.board == "public" else cross_rank
+    private_rank = row.own_rank if row.board == "private" else cross_rank
     public_score = _text(
-        public_row.raw.get("public_score", public_row.raw.get("score"))
+        (
+            public_row.raw.get("public_score", public_row.raw.get("score"))
+            if public_row is not None
+            else row.raw.get("public_score")
+        )
     )
     private_score = _text(
-        private_row.raw.get("private_score", private_row.raw.get("score"))
+        (
+            private_row.raw.get("private_score", private_row.raw.get("score"))
+            if private_row is not None
+            else row.raw.get("private_score")
+        )
     )
     return (
         Candidate(
@@ -518,11 +539,11 @@ def _candidate_for_row(
             member_handles=member_handles,
             public_row=public_row,
             private_row=private_row,
-            public_rank=public_row.own_rank,
-            private_rank=private_row.own_rank,
+            public_rank=public_rank,
+            private_rank=private_rank,
             public_score=public_score,
             private_score=private_score,
-            writeup_url=next(iter(canonical_urls)),
+            writeup_url=selection.writeup_url,
         ),
         "",
     )
@@ -530,12 +551,11 @@ def _candidate_for_row(
 
 def _select_board(
     rows: Sequence[BoardRow],
-    other_rows: Sequence[BoardRow],
     competition_id: str,
     competition_slug: str,
     skipped: Counter,
-) -> Tuple[List[Candidate], int]:
-    selected: List[Candidate] = []
+) -> Tuple[List[BoardSelection], int]:
+    selected: List[BoardSelection] = []
     selected_ids = set()
     scanned = 0
     for row in rows:
@@ -549,27 +569,47 @@ def _select_board(
         if not own_writeup:
             skipped[f"{row.board}: no official same-competition writeup URL"] += 1
             continue
-        candidate, reason = _candidate_for_row(
-            row,
+        team_id = row.team_id or _fallback_team_id(
+            competition_id,
+            row.team_name,
+            row.member_handles,
+        )
+        if team_id in selected_ids:
+            skipped[f"{row.board}: duplicate team row"] += 1
+            continue
+        selected_ids.add(team_id)
+        selected.append(BoardSelection(row=row, writeup_url=own_writeup))
+    return selected, scanned
+
+
+def _resolve_selections(
+    selections: Sequence[BoardSelection],
+    other_rows: Sequence[BoardRow],
+    competition_id: str,
+    competition_slug: str,
+) -> List[Candidate]:
+    resolved: List[Candidate] = []
+    for selection in selections:
+        candidate, reason = _candidate_for_selection(
+            selection,
             other_rows,
             competition_id,
             competition_slug,
         )
         if candidate is None:
+            row = selection.row
             opposite = "Private" if row.board == "public" else "Public"
+            cross_field = "private_rank" if row.board == "public" else "public_rank"
             raise ManifestError(
-                f"{row.board.title()} rank {row.own_rank} has a qualifying "
-                f"official writeup but its {opposite} cross-rank evidence is "
-                f"incomplete ({reason}). Extend the complete {opposite} rank "
-                "prefix through this team; do not substitute a lower-ranked "
-                "writeup."
+                f"{row.board.title()} rank {row.own_rank} is in the independent "
+                f"top-five official-writeup selection, but its {opposite} "
+                f"cross-rank evidence is incomplete ({reason}). Record a "
+                f"verified {cross_field} on this row or include the same team "
+                f"identity in the {opposite} prefix; do not substitute a "
+                "lower-ranked writeup."
             )
-        if candidate.team_id in selected_ids:
-            skipped[f"{row.board}: duplicate team row"] += 1
-            continue
-        selected_ids.add(candidate.team_id)
-        selected.append(candidate)
-    return selected, scanned
+        resolved.append(candidate)
+    return resolved
 
 
 def _analysis_rows(payload: Mapping[str, Any]) -> List[Mapping[str, Any]]:
@@ -641,8 +681,8 @@ def _leaderboard_source(
 ) -> str:
     row = candidate.public_row if board == "public" else candidate.private_row
     value = (
-        row.raw.get(f"{board}_rank_source_url")
-        or row.raw.get("rank_source_url")
+        (row.raw.get(f"{board}_rank_source_url") if row is not None else None)
+        or (row.raw.get("rank_source_url") if row is not None else None)
         or payload.get(f"{board}_rank_source_url")
         or payload.get("leaderboard_url")
     )
@@ -720,12 +760,13 @@ def _solution_record(
     candidate: Candidate,
     analysis: Mapping[str, Any],
 ) -> Dict[str, Any]:
-    source_rows = [
-        analysis,
-        candidate.public_row.raw,
-        candidate.private_row.raw,
-        payload,
-    ]
+    source_rows = [analysis]
+    source_rows.extend(
+        row.raw
+        for row in (candidate.public_row, candidate.private_row)
+        if row is not None
+    )
+    source_rows.append(payload)
     title = (
         _text(_first_value(source_rows, "title", "writeup_title"))
         or f"{candidate.team_name or candidate.team_id} Solution Writeup"
@@ -884,32 +925,42 @@ def prepare_manifest(
         skipped,
     )
 
-    public_selected, public_scanned = _select_board(
-        public_rows,
-        private_rows,
-        competition_id,
-        competition_slug,
-        skipped,
-    )
-    private_selected, private_scanned = _select_board(
-        private_rows,
+    public_provisional, public_scanned = _select_board(
         public_rows,
         competition_id,
         competition_slug,
         skipped,
     )
-    if len(public_selected) < SELECTION_SIZE and not public_exhausted:
+    private_provisional, private_scanned = _select_board(
+        private_rows,
+        competition_id,
+        competition_slug,
+        skipped,
+    )
+    if len(public_provisional) < SELECTION_SIZE and not public_exhausted:
         raise ManifestError(
             "Public scan found fewer than five qualifying writeups; continue "
             "the complete rank-prefix scan or set public_scan_exhausted=true "
             "only after the final leaderboard row was reviewed"
         )
-    if len(private_selected) < SELECTION_SIZE and not private_exhausted:
+    if len(private_provisional) < SELECTION_SIZE and not private_exhausted:
         raise ManifestError(
             "Private scan found fewer than five qualifying writeups; continue "
             "the complete rank-prefix scan or set private_scan_exhausted=true "
             "only after the final leaderboard row was reviewed"
         )
+    public_selected = _resolve_selections(
+        public_provisional,
+        private_rows,
+        competition_id,
+        competition_slug,
+    )
+    private_selected = _resolve_selections(
+        private_provisional,
+        public_rows,
+        competition_id,
+        competition_slug,
+    )
 
     canonical: Dict[str, Candidate] = {}
     selection_boards: MutableMapping[str, List[str]] = {}

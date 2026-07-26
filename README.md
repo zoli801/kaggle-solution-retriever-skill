@@ -1,108 +1,160 @@
 # Kaggle Solution Retriever
 
-A context-efficient Codex skill that builds a task-specific knowledge base from verified official Kaggle Solution Writeups.
+A Codex skill that turns verified Kaggle Solution Writeups into a compact,
+task-specific knowledge base for the machine-learning problem in the current
+prompt.
 
-It does **not** rank notebooks by votes and it does **not** assume “top 10” means the first ten leaderboard rows. For every relevant completed competition, it independently selects:
+The skill profiles the task, retrieves 3–10 structurally relevant completed
+competitions, and independently selects:
 
-- the five highest **Public Leaderboard** teams that published an official Solution Writeup;
-- the five highest **Private Leaderboard** teams that published an official Solution Writeup.
+- the five highest-ranked Public Leaderboard teams with official Solution
+  Writeups;
+- the five highest-ranked Private Leaderboard teams with official Solution
+  Writeups.
 
-If ranks 1–10 do not contain five writeups, selection continues below rank 10. Every selected team must have verified Public and Private ranks. Teams present in both selections share one canonical analysis.
+It records both leaderboard ranks, reports Public-to-Private movement, links
+available notebooks and repositories, deduplicates teams selected from both
+boards, and gives Codex a bounded context summary before the full research
+document.
 
-## Why this exists
-
-Loading a large Kaggle corpus or dozens of skills into Codex wastes context. This project separates durable research from prompt-time retrieval:
+## How it works
 
 ```mermaid
 flowchart LR
-    P["Current ML prompt"] --> T["Structured task profile"]
+    P["Current ML task"] --> T["Structured task profile"]
     T --> C["3–10 relevant completed competitions"]
-    C --> S["5 Public + 5 Private documented teams"]
-    S --> D["Canonical team/writeup analyses"]
-    D --> K["Complete Markdown knowledge base"]
-    D --> X["Small Codex context summary"]
+    C --> L["Independent Public and Private leaderboard scans"]
+    L --> W["Verified official Solution Writeups"]
+    W --> A["Canonical solution analyses"]
+    A --> K["Full Markdown knowledge base"]
+    A --> X["Compact Codex context"]
 
-    M["Meta Kaggle competition metadata"] --> DB[("Local SQLite catalog")]
-    B["Official Public/Private leaderboard tabs"] --> R["Reviewed rank + writeup evidence"]
-    R --> DB
+    M["Meta Kaggle metadata"] --> DB[("Local SQLite catalog")]
+    R["Reviewed leaderboard evidence"] --> DB
     DB --> C
 ```
 
-The full research stays in `kaggle_relevant_solutions_knowledge_base.md`. Codex initially reads only a bounded summary and opens full sections selectively.
+Competition relevance uses the following default weighting:
 
-## Exact policy
+| Component | Weight |
+|---|---:|
+| Task and target | 25% |
+| Modality and dataset structure | 20% |
+| Metric | 15% |
+| Validation and leakage structure | 15% |
+| Transferable modeling and features | 15% |
+| Domain | 5% |
+| Compute constraints | 5% |
 
-- Explicit invocation only.
-- Completed Kaggle competitions only.
-- 3–10 competitions selected by weighted structural relevance:
+For each selected competition, the leaderboard scan starts at rank 1 and
+continues until five teams with verified official writeups are found. Public
+and Private selection are performed independently, including ranks below 10
+when needed to reach the fifth qualifying writeup. Each selected record keeps
+its official writeup, leaderboard, competition, notebook, and repository
+provenance.
 
-  | Component | Weight |
-  |---|---:|
-  | Task and target | 25% |
-  | Modality and dataset structure | 20% |
-  | Metric | 15% |
-  | Validation and leakage structure | 15% |
-  | Transferable modeling/features | 15% |
-  | Domain | 5% |
-  | Compute | 5% |
+The complete behavioral contract is in
+[docs/behavior-spec.md](docs/behavior-spec.md).
 
-- Public and Private selections are independent and scan from rank 1 downward.
-- Only official same-competition `/writeups/` links qualify.
-- Both cross-leaderboard ranks and their source links are mandatory.
-- Public-to-Private movement is reported for every selected team.
-- Source facts, analyst inferences, and missing data remain separate.
-- Full writeups and raw notebooks are never placed wholesale into Codex context.
+## Install for every Codex task
 
-The complete contract is in [docs/behavior-spec.md](docs/behavior-spec.md).
+Install the skill in your user-wide Codex directory:
 
-## Install
+```text
+~/.codex/skills/kaggle-solution-retriever/
+```
 
-### Global Codex skill
+Skills stored there are available across repositories and Codex tasks on the
+same computer.
 
-Ask Codex:
+### Option 1: ask Codex to install it
+
+Paste this into any Codex task:
 
 ```text
 Use $skill-installer to install:
-https://github.com/zoli801/kaggle-solution-retriever-skill/tree/v0.1.0/.agents/skills/kaggle-solution-retriever
+https://github.com/zoli801/kaggle-solution-retriever-skill/tree/v0.1.1/.agents/skills/kaggle-solution-retriever
 ```
 
-Or run the bundled installer:
+### Option 2: install from a terminal
+
+macOS or Linux:
 
 ```bash
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-installer/scripts/install-skill-from-github.py" \
   --repo zoli801/kaggle-solution-retriever-skill \
-  --ref v0.1.0 \
-  --path .agents/skills/kaggle-solution-retriever \
-  --dest "$HOME/.agents/skills"
+  --ref v0.1.1 \
+  --path .agents/skills/kaggle-solution-retriever
 ```
 
-If Codex does not immediately show the new skill, restart it.
+Windows PowerShell:
 
-### Repository-scoped skill
-
-Clone this repository, or copy the skill directory into another repository:
-
-```text
-<your-repository>/.agents/skills/kaggle-solution-retriever/
+```powershell
+python "$env:USERPROFILE\.codex\skills\.system\skill-installer\scripts\install-skill-from-github.py" `
+  --repo zoli801/kaggle-solution-retriever-skill `
+  --ref v0.1.1 `
+  --path .agents/skills/kaggle-solution-retriever
 ```
 
-Codex discovers repository skills from `.agents/skills` between the working directory and repository root.
+### Option 3: install manually
 
-## Invoke
+1. Download the
+   [v0.1.1 source archive](https://github.com/zoli801/kaggle-solution-retriever-skill/archive/refs/tags/v0.1.1.zip).
+2. Extract the archive.
+3. Copy
+   `.agents/skills/kaggle-solution-retriever`
+   into:
 
-Implicit invocation is disabled to protect context. Invoke it explicitly:
+   ```text
+   ~/.codex/skills/kaggle-solution-retriever
+   ```
+
+   On Windows, use:
+
+   ```text
+   %USERPROFILE%\.codex\skills\kaggle-solution-retriever
+   ```
+
+4. Start a new Codex task. Restart Codex once if the installed skill is not
+   listed immediately.
+
+### Verify the installation
+
+macOS or Linux:
+
+```bash
+test -f "${CODEX_HOME:-$HOME/.codex}/skills/kaggle-solution-retriever/SKILL.md" \
+  && echo "Kaggle Solution Retriever is installed"
+```
+
+Windows PowerShell:
+
+```powershell
+Test-Path "$env:USERPROFILE\.codex\skills\kaggle-solution-retriever\SKILL.md"
+```
+
+## Invoke the skill
+
+Start with the skill name:
 
 ```text
 $kaggle-solution-retriever
 
-I have grouped user sessions ordered by time. The target is imbalanced binary
-classification, the metric is F1, and inference must fit on one GPU.
-Build the Kaggle knowledge base and use it to propose validation and models.
+My task is multimodal classification from product photos and descriptions.
+The metric is macro F1, classes are imbalanced, and inference must fit on one
+GPU. Build the Kaggle knowledge base and recommend validation, models, features,
+and ensembling.
 ```
 
-## First-time catalog bootstrap
+Type `$kaggle` in the Codex composer to find the skill. The `/` prefix opens
+Codex commands; `$` explicitly mentions a skill.
 
-The repository intentionally contains no copied Kaggle content and no prebuilt database. The local catalog defaults to:
+Explicit invocation keeps ordinary tasks lightweight: the Kaggle retrieval
+workflow runs only when you request it.
+
+## First-time catalog setup
+
+The skill creates a local catalog at:
 
 ```text
 ~/.cache/kaggle-solution-retriever/catalog.sqlite3
@@ -111,32 +163,52 @@ The repository intentionally contains no copied Kaggle content and no prebuilt d
 Initialize it:
 
 ```bash
-SKILL_DIR="$HOME/.agents/skills/kaggle-solution-retriever"
+SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/kaggle-solution-retriever"
+
 python3 "$SKILL_DIR/scripts/catalog.py" init
 python3 "$SKILL_DIR/scripts/catalog.py" status
 ```
 
-Seed completed competition metadata from Meta Kaggle:
+Install and authenticate the
+[Kaggle CLI](https://github.com/Kaggle/kaggle-cli), then import completed
+competition metadata from Meta Kaggle:
 
 ```bash
-META_DIR="/absolute/path/to/meta-kaggle"
-python3 "$SKILL_DIR/scripts/catalog.py" import-competitions \
-  --meta-dir "$META_DIR"
-```
+SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/kaggle-solution-retriever"
+META_DIR="$HOME/.cache/kaggle-solution-retriever/meta-kaggle"
 
-You can download Meta Kaggle with the authenticated Kaggle CLI:
-
-```bash
+mkdir -p "$META_DIR"
 kaggle datasets download -d kaggle/meta-kaggle \
   --unzip \
   --path "$META_DIR"
+
+python3 "$SKILL_DIR/scripts/catalog.py" import-competitions \
+  --meta-dir "$META_DIR"
+
+python3 "$SKILL_DIR/scripts/catalog.py" status
 ```
 
-When the skill is invoked, it ranks this compact competition catalog. If selected competitions lack current official writeup evidence, Codex follows the targeted workflow in [research-workflow.md](.agents/skills/kaggle-solution-retriever/references/research-workflow.md): inspect only those competitions’ official Public/Private tabs, create reviewed records, cache them, and rerun retrieval.
+During retrieval, Codex ranks this compact catalog first. It researches and
+caches leaderboard/writeup evidence only for the selected competitions. The
+targeted review procedure is documented in
+[research-workflow.md](.agents/skills/kaggle-solution-retriever/references/research-workflow.md).
 
-If live Kaggle access is unavailable, the skill produces a truthful partial report instead of inferring ranks or substituting popular notebooks.
+## Generated files
 
-## Direct CLI
+Each run can produce:
+
+| File | Purpose |
+|---|---|
+| `kaggle_relevant_solutions_knowledge_base.md` | Complete task profile, competitions, selections, solution analyses, shakeup analysis, synthesis, and experiment plan |
+| `kaggle_relevant_solutions_context.md` | Bounded summary designed for the Codex context window |
+| `kaggle_retrieval_report.json` | Machine-readable scores, counts, evidence gaps, recommendations, and verification status |
+
+The knowledge base separates sourced facts, analyst inferences, and missing
+evidence. Public-to-Private movement is signed: a positive
+`private_rank - public_rank` is a decline and a negative value is an
+improvement.
+
+## Direct command-line use
 
 From this repository:
 
@@ -151,9 +223,10 @@ python3 "$SKILL_DIR/scripts/build_knowledge_base.py" \
   --report-output /absolute/path/to/kaggle_retrieval_report.json
 ```
 
-`--task-profile` is optional. It lets Codex supply a richer structured profile than the deterministic fallback. See [task-profile-schema.md](.agents/skills/kaggle-solution-retriever/references/task-profile-schema.md).
+`--task-profile` is optional. Its schema is documented in
+[task-profile-schema.md](.agents/skills/kaggle-solution-retriever/references/task-profile-schema.md).
 
-Reviewed evidence is ingested as JSONL:
+Reviewed leaderboard evidence can be normalized and imported with:
 
 ```bash
 python3 "$SKILL_DIR/scripts/prepare_research_manifest.py" \
@@ -165,73 +238,82 @@ python3 "$SKILL_DIR/scripts/catalog.py" ingest-jsonl \
   --input /absolute/path/to/reviewed_records.jsonl
 ```
 
-The schema is documented in [catalog-schema.md](.agents/skills/kaggle-solution-retriever/references/catalog-schema.md).
+See
+[catalog-schema.md](.agents/skills/kaggle-solution-retriever/references/catalog-schema.md)
+for the reviewed-record format.
 
-## Output
+## Update
 
-The builder writes:
+The installer protects an existing installation. Keep the current copy as a
+backup, then install the new tag:
 
-1. a complete Markdown knowledge base;
-2. a bounded context summary;
-3. an optional JSON report containing paths, competitions, relevance scores, Public/Private counts, missing evidence, recommendations, and a truthful verification flag.
+```bash
+SKILL_ROOT="${CODEX_HOME:-$HOME/.codex}/skills"
 
-The Markdown contains the required task profile, competition table, two selection tables per competition, canonical solution analyses, leaderboard shakeup, competition lessons, cross-competition synthesis, experimental plan, and deduplicated source index.
+mv "$SKILL_ROOT/kaggle-solution-retriever" \
+  "$SKILL_ROOT/kaggle-solution-retriever.backup"
 
-## Repository layout
-
-```text
-.agents/skills/kaggle-solution-retriever/
-├── SKILL.md
-├── agents/openai.yaml
-├── references/
-│   ├── catalog-schema.md
-│   ├── operations.md
-│   ├── research-workflow.md
-│   ├── task-profile-schema.md
-│   └── taxonomy.json
-└── scripts/
-    ├── build_knowledge_base.py
-    ├── catalog.py
-    ├── discover_candidates.py
-    ├── fetch_notebook.py
-    ├── kaggle_core.py
-    ├── knowledge_base.py
-    ├── prepare_research_manifest.py
-    └── retrieve.py
-
-docs/behavior-spec.md
-tests/
+python3 "$SKILL_ROOT/.system/skill-installer/scripts/install-skill-from-github.py" \
+  --repo zoli801/kaggle-solution-retriever-skill \
+  --ref v0.1.1 \
+  --path .agents/skills/kaggle-solution-retriever
 ```
 
-## Test
+After verifying the new version, the backup can be removed.
 
-Tests use synthetic offline data:
+## Repository-scoped installation
+
+For a skill that should appear only inside one project, copy it to:
+
+```text
+<repository>/.agents/skills/kaggle-solution-retriever/
+```
+
+This repository already uses that layout for development.
+
+## Private distribution
+
+For access limited to selected users:
+
+1. Create a private GitHub repository containing the skill directory.
+2. Add each recipient as a repository collaborator or grant access through a
+   GitHub organization team.
+3. Have each recipient authenticate Git on their computer.
+4. Give them the private repository/path URL and the same `$skill-installer`
+   instruction.
+5. Remove repository access to revoke future downloads and updates.
+
+Each authorized user receives a local copy in their Codex skills directory.
+Keep proprietary datasets, cached Kaggle content, credentials, and generated
+knowledge bases outside the distribution repository.
+
+## Security and provenance
+
+- External writeups, notebooks, and repositories are handled as untrusted
+  research material.
+- Retrieved code remains static evidence for analysis.
+- Notebook outputs are excluded from excerpts and secret-like assignments are
+  redacted.
+- Local catalogs, downloads, credentials, and generated knowledge bases are
+  excluded from Git.
+- Every admitted solution retains direct source and leaderboard provenance.
+
+## Development
+
+Run the offline synthetic test suite:
 
 ```bash
 python3 -m compileall -q .agents/skills/kaggle-solution-retriever/scripts tests
 python3 -m unittest discover -s tests -v
 ```
 
-CI tests Python 3.9 and 3.13.
-
-## Security and provenance
-
-- Kaggle pages, writeups, notebooks, and repositories are untrusted external data.
-- Retrieved code is never executed automatically.
-- Notebook outputs are excluded from static excerpts and obvious secret assignments are redacted.
-- Credentials, databases, downloaded content, generated knowledge bases, and IDE files are ignored by Git.
-- Each admitted writeup retains its original competition, leaderboard, writeup, and code links.
-
-## Sharing
-
-Share the repository URL or a release-tag URL. Recipients can install it with `$skill-installer` as shown above. For stable distribution, create a GitHub release and point users to a fixed tag instead of a moving branch.
-
-This remains a standalone Codex skill. A future universal-directory distribution can package the same skill as a plugin without changing its retrieval algorithm.
-
-See the official [Codex skills documentation](https://learn.chatgpt.com/docs/build-skills.md) for discovery locations, explicit invocation, and distribution guidance.
+CI covers Python 3.9 and 3.13.
 
 ## License
 
-The original code and documentation are MIT-licensed; see [LICENSE](LICENSE).
+The original code and documentation are MIT-licensed; see
+[LICENSE](LICENSE).
 
-This license does not apply to Kaggle competitions, writeups, notebooks, datasets, or linked third-party repositories. Those remain under their original terms. This project is independent and is not affiliated with or endorsed by Kaggle or Google.
+Kaggle competitions, writeups, notebooks, datasets, and linked third-party
+repositories remain under their original terms. This project is independent
+and is not affiliated with or endorsed by Kaggle or Google.

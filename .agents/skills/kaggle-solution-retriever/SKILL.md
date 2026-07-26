@@ -23,7 +23,7 @@ Run this workflow only after explicit `$kaggle-solution-retriever` invocation. N
 - Completed competitions only.
 - Select 3–10 competitions using the documented weighted structural score. Lower the strict threshold only to the safe floor; never add an irrelevant competition merely to reach three.
 - Leaderboard research exports must contain complete rank prefixes beginning at rank 1, not only teams that have writeups.
-- Extend each opposite-board prefix through every provisional top-five team's cross-rank. Missing cross-evidence is a hard refresh requirement, never a reason to substitute a lower-ranked writeup.
+- Lock each board's provisional top five before resolving cross-ranks. For every provisional selection, record a reviewed opposite-board rank on the selected row or include the matching identity in the opposite prefix. Missing cross-evidence is a hard refresh requirement, never a reason to substitute a lower-ranked writeup.
 - For each competition, scan Public rank upward from 1 and take the first five teams with verified official `/competitions/<slug>/writeups/...` links.
 - Independently scan Private rank upward from 1 and take the first five teams with such writeups.
 - Continue below rank 10 when teams above it lack writeups.
