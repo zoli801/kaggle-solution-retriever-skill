@@ -1,0 +1,54 @@
+# Local Kaggle catalog, downloaded notebooks, and generated artifacts
+.kaggle-solution-cache/
+kaggle_relevant_solutions_knowledge_base.md
+kaggle_relevant_solutions_context.md
+kaggle_retrieval_report.json
+leaderboard_research*.json
+reviewed_records*.jsonl
+research_audit*.json
+notebook_excerpt*.md
+current_task*.txt
+task_profile*.json
+meta-kaggle/
+*.sqlite
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+kaggle.json
+credentials.json
+.secrets/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local files retained for reference but intentionally not published
+main.py
+KAGGLE_EXPERT_SYSTEM.md

@@ -1,0 +1,181 @@
+{
+  "computer-vision": [
+    "computer vision",
+    "image",
+    "images",
+    "photo",
+    "photos",
+    "visual",
+    "cv",
+    "изображен",
+    "фото",
+    "картин"
+  ],
+  "nlp": [
+    "nlp",
+    "text",
+    "texts",
+    "language",
+    "document",
+    "documents",
+    "token",
+    "transformer",
+    "текст",
+    "язык",
+    "документ"
+  ],
+  "llm": [
+    "llm",
+    "large language model",
+    "language model",
+    "prompt",
+    "instruction tuning",
+    "qwen",
+    "kimi",
+    "gemma",
+    "llama",
+    "языковая модель"
+  ],
+  "multimodal": [
+    "multimodal",
+    "vision language",
+    "vlm",
+    "image and text",
+    "text and image",
+    "photo and text",
+    "мультимодал",
+    "текст с фото",
+    "фото и текст"
+  ],
+  "tabular": [
+    "tabular",
+    "table",
+    "structured data",
+    "csv",
+    "feature engineering",
+    "catboost",
+    "lightgbm",
+    "xgboost",
+    "таблич",
+    "структурирован"
+  ],
+  "time-series": [
+    "time series",
+    "timeseries",
+    "temporal",
+    "forecast",
+    "forecasting",
+    "lag feature",
+    "временн",
+    "прогноз"
+  ],
+  "audio": [
+    "audio",
+    "sound",
+    "speech",
+    "spectrogram",
+    "waveform",
+    "acoustic",
+    "звук",
+    "речь",
+    "аудио"
+  ],
+  "graph": [
+    "graph",
+    "node",
+    "edge",
+    "gnn",
+    "network science",
+    "граф"
+  ],
+  "geospatial": [
+    "geospatial",
+    "geographic",
+    "satellite",
+    "latitude",
+    "longitude",
+    "gis",
+    "геодан",
+    "спутник"
+  ],
+  "recommendation": [
+    "recommender",
+    "recommendation",
+    "collaborative filtering",
+    "matrix factorization",
+    "ranking",
+    "рекоменд"
+  ],
+  "classification": [
+    "classification",
+    "classifier",
+    "classify",
+    "classes",
+    "binary class",
+    "multiclass",
+    "классификац",
+    "класс"
+  ],
+  "regression": [
+    "regression",
+    "continuous target",
+    "rmse",
+    "mae",
+    "регресси"
+  ],
+  "detection": [
+    "object detection",
+    "bounding box",
+    "yolo",
+    "detect objects",
+    "детекц",
+    "обнаруж"
+  ],
+  "segmentation": [
+    "segmentation",
+    "semantic mask",
+    "instance mask",
+    "dice score",
+    "сегментац",
+    "маск"
+  ],
+  "ocr": [
+    "ocr",
+    "optical character recognition",
+    "text in image",
+    "read text from image",
+    "распознать текст",
+    "текст на фото"
+  ],
+  "retrieval": [
+    "retrieval",
+    "search",
+    "semantic search",
+    "embedding search",
+    "rag",
+    "поиск",
+    "ретрив"
+  ],
+  "ranking": [
+    "learning to rank",
+    "ranking",
+    "map@",
+    "ndcg",
+    "ранжирован"
+  ],
+  "generation": [
+    "generation",
+    "generative",
+    "generate text",
+    "diffusion",
+    "генерац"
+  ],
+  "anomaly-detection": [
+    "anomaly",
+    "outlier",
+    "fraud",
+    "anomalous",
+    "аномал",
+    "мошеннич"
+  ]
+}

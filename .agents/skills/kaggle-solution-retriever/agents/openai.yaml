@@ -1,0 +1,6 @@
+interface:
+  display_name: "Kaggle Solution Retriever"
+  short_description: "Build a verified Public/Private Kaggle writeup KB"
+  default_prompt: "Use $kaggle-solution-retriever to build a task-specific knowledge base with five verified Public-LB and five verified Private-LB Solution Writeups per relevant completed competition."
+policy:
+  allow_implicit_invocation: false
