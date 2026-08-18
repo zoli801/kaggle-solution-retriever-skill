@@ -1,0 +1,81 @@
+name: Temporary IHES research
+
+on:
+  push:
+    branches:
+      - tmp-ihes-21840
+
+permissions:
+  contents: read
+
+jobs:
+  gather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Gather public datasets and build twsearch
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p out/datasets out/search
+
+          python - <<'PY'
+          import json, pathlib, urllib.parse, urllib.request
+          qs = [
+              'ihes',
+              'cayleypy submissions',
+              'supercube',
+              'cayleypy ihes',
+          ]
+          out = pathlib.Path('out/search')
+          for q in qs:
+              u = 'https://www.kaggle.com/api/v1/datasets/list?search=' + urllib.parse.quote(q)
+              try:
+                  with urllib.request.urlopen(u, timeout=60) as r:
+                      data = r.read()
+                  (out / (q.replace(' ', '_') + '.json')).write_bytes(data)
+                  rows = json.loads(data)
+                  print('\nQUERY', q, 'COUNT', len(rows))
+                  for x in rows:
+                      print(x.get('ref'), x.get('title'), x.get('totalBytes'))
+              except Exception as e:
+                  print('SEARCH FAILED', q, repr(e))
+          PY
+
+          datasets=(
+            alexandervc/cayleypy-submissions
+            arabidopsisthalian/subm-from-s-to-24
+            olegpushs/marged-2025-11-14
+            arabidopsisthalian/ihes-v2
+            arabidopsisthalian/ihes-ruslan
+            arabidopsisthalian/script-ihes
+            alexandervc/cayleypy-submits-parts
+            olegpushs/sub-ihes
+            adaluodaa/ihes-path
+          )
+          for ds in "${datasets[@]}"; do
+            name="${ds//\//__}"
+            url="https://www.kaggle.com/api/v1/datasets/download/${ds}"
+            echo "Downloading ${ds}"
+            if curl -fL --retry 3 --retry-delay 2 "$url" -o "out/datasets/${name}.zip"; then
+              unzip -l "out/datasets/${name}.zip" > "out/datasets/${name}.listing.txt" || true
+            else
+              rm -f "out/datasets/${name}.zip"
+              echo "FAILED ${ds}" > "out/datasets/${name}.failed.txt"
+            fi
+          done
+
+          git clone --depth 1 https://github.com/rokicki/twsearch.git twsearch
+          make -C twsearch build/bin/twsearch -j2
+          cp twsearch/build/bin/twsearch out/twsearch
+          chmod +x out/twsearch
+          out/twsearch --help > out/twsearch-help.txt 2>&1 || true
+          du -ah out | sort -h | tail -100
+
+      - name: Upload research bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ihes-research-bundle
+          path: out
+          compression-level: 1
+          retention-days: 1
