@@ -6,28 +6,36 @@ on:
       - tmp-ihes-21840
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   gather:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
-      - name: Gather public datasets and build twsearch
+      - name: Check out temporary branch
+        uses: actions/checkout@v4
+        with:
+          ref: tmp-ihes-21840
+          fetch-depth: 1
+
+      - name: Download and merge public IHES submissions
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p out/datasets out/search
+          rm -rf .tmp-ihes research-output
+          mkdir -p .tmp-ihes/zips .tmp-ihes/search .tmp-ihes/extracted research-output
+
+          curl -fL --retry 3 \
+            https://raw.githubusercontent.com/Erlemar/cayley-puzzles/main/data/puzzle_info.json \
+            -o .tmp-ihes/puzzle_info.json
 
           python - <<'PY'
           import json, pathlib, urllib.parse, urllib.request
-          qs = [
-              'ihes',
-              'cayleypy submissions',
-              'supercube',
-              'cayleypy ihes',
-          ]
-          out = pathlib.Path('out/search')
+          qs = ['ihes', 'cayleypy submissions', 'supercube', 'cayleypy ihes']
+          out = pathlib.Path('.tmp-ihes/search')
+          refs = set()
           for q in qs:
               u = 'https://www.kaggle.com/api/v1/datasets/list?search=' + urllib.parse.quote(q)
               try:
@@ -37,45 +45,171 @@ jobs:
                   rows = json.loads(data)
                   print('\nQUERY', q, 'COUNT', len(rows))
                   for x in rows:
-                      print(x.get('ref'), x.get('title'), x.get('totalBytes'))
+                      ref = x.get('ref')
+                      print(ref, x.get('title'), x.get('totalBytes'))
+                      if ref and any(k in ref.lower() for k in ('ihes', 'cayley', 'supercube')):
+                          refs.add(ref)
               except Exception as e:
                   print('SEARCH FAILED', q, repr(e))
+          pathlib.Path('.tmp-ihes/dynamic_refs.txt').write_text('\n'.join(sorted(refs)) + '\n')
           PY
 
-          datasets=(
-            alexandervc/cayleypy-submissions
-            arabidopsisthalian/subm-from-s-to-24
-            olegpushs/marged-2025-11-14
-            arabidopsisthalian/ihes-v2
-            arabidopsisthalian/ihes-ruslan
-            arabidopsisthalian/script-ihes
-            alexandervc/cayleypy-submits-parts
-            olegpushs/sub-ihes
-            adaluodaa/ihes-path
-          )
-          for ds in "${datasets[@]}"; do
+          cat > .tmp-ihes/known_refs.txt <<'EOF'
+          alexandervc/cayleypy-submissions
+          arabidopsisthalian/subm-from-s-to-24
+          olegpushs/marged-2025-11-14
+          arabidopsisthalian/ihes-v2
+          arabidopsisthalian/ihes-ruslan
+          arabidopsisthalian/script-ihes
+          alexandervc/cayleypy-submits-parts
+          olegpushs/sub-ihes
+          adaluodaa/ihes-path
+          EOF
+          cat .tmp-ihes/known_refs.txt .tmp-ihes/dynamic_refs.txt | sed '/^[[:space:]]*$/d' | sort -u > .tmp-ihes/all_refs.txt
+
+          while IFS= read -r ds; do
             name="${ds//\//__}"
             url="https://www.kaggle.com/api/v1/datasets/download/${ds}"
             echo "Downloading ${ds}"
-            if curl -fL --retry 3 --retry-delay 2 "$url" -o "out/datasets/${name}.zip"; then
-              unzip -l "out/datasets/${name}.zip" > "out/datasets/${name}.listing.txt" || true
+            if curl -fL --retry 3 --retry-delay 2 "$url" -o ".tmp-ihes/zips/${name}.zip"; then
+              mkdir -p ".tmp-ihes/extracted/${name}"
+              unzip -q -o ".tmp-ihes/zips/${name}.zip" -d ".tmp-ihes/extracted/${name}" || true
+              unzip -l ".tmp-ihes/zips/${name}.zip" > ".tmp-ihes/zips/${name}.listing.txt" || true
             else
-              rm -f "out/datasets/${name}.zip"
-              echo "FAILED ${ds}" > "out/datasets/${name}.failed.txt"
+              rm -f ".tmp-ihes/zips/${name}.zip"
+              echo "FAILED ${ds}" > ".tmp-ihes/zips/${name}.failed.txt"
             fi
-          done
+          done < .tmp-ihes/all_refs.txt
 
-          git clone --depth 1 https://github.com/rokicki/twsearch.git twsearch
-          make -C twsearch build/bin/twsearch -j2
-          cp twsearch/build/bin/twsearch out/twsearch
-          chmod +x out/twsearch
-          out/twsearch --help > out/twsearch-help.txt 2>&1 || true
-          du -ah out | sort -h | tail -100
+          python - <<'PY'
+          from __future__ import annotations
+          import csv
+          import json
+          import pathlib
+          from collections import Counter, defaultdict
 
-      - name: Upload research bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: ihes-research-bundle
-          path: out
-          compression-level: 1
-          retention-days: 1
+          root = pathlib.Path('.tmp-ihes/extracted')
+          info = json.loads(pathlib.Path('.tmp-ihes/puzzle_info.json').read_text())
+          gens = {k: tuple(v) for k, v in info['generators'].items()}
+          allowed = set(gens)
+          ident = tuple(info['central_state'])
+
+          def path_perm(s: str):
+              toks = [x.strip() for x in s.strip().split('.') if x.strip()]
+              if not toks or any(x not in allowed for x in toks):
+                  return None
+              st = ident
+              for x in toks:
+                  g = gens[x]
+                  st = tuple(st[i] for i in g)
+              return bytes(st), len(toks), '.'.join(toks)
+
+          def sniff(path: pathlib.Path):
+              try:
+                  sample = path.read_text(encoding='utf-8-sig', errors='replace')[:8192]
+                  if not sample.strip():
+                      return None
+                  try:
+                      d = csv.Sniffer().sniff(sample, delimiters=',;\t')
+                  except Exception:
+                      d = csv.excel
+                  with path.open('r', encoding='utf-8-sig', errors='replace', newline='') as f:
+                      rows = list(csv.DictReader(f, dialect=d))
+                  if not rows:
+                      return None
+                  cols = {str(c).strip().lower(): c for c in rows[0]}
+                  pcol = next((cols[x] for x in ('path', 'moves', 'solution') if x in cols), None)
+                  icol = next((cols[x] for x in ('initial_state_id', 'id', 'puzzle_id') if x in cols), None)
+                  if pcol is None or icol is None:
+                      return None
+                  return rows, icol, pcol
+              except Exception:
+                  return None
+
+          # For each puzzle and resulting permutation, count distinct source files and retain the shortest path.
+          votes = [defaultdict(int) for _ in range(1003)]
+          best = [dict() for _ in range(1003)]
+          source_summaries = []
+          scanned = 0
+          accepted_files = 0
+          for path in root.rglob('*.csv'):
+              scanned += 1
+              got = sniff(path)
+              if got is None:
+                  continue
+              rows, icol, pcol = got
+              seen = set()
+              valid_rows = 0
+              total_len = 0
+              local = {}
+              for row in rows:
+                  try:
+                      pid = int(str(row.get(icol, '')).strip())
+                  except Exception:
+                      continue
+                  if not (0 <= pid < 1003) or pid in seen:
+                      continue
+                  z = path_perm(str(row.get(pcol, '')))
+                  if z is None:
+                      continue
+                  perm, n, canon = z
+                  seen.add(pid)
+                  local[pid] = (perm, n, canon)
+                  valid_rows += 1
+                  total_len += n
+              if valid_rows < 10:
+                  continue
+              accepted_files += 1
+              source = str(path.relative_to(root))
+              source_summaries.append((valid_rows, total_len, source))
+              for pid, (perm, n, canon) in local.items():
+                  votes[pid][perm] += 1
+                  old = best[pid].get(perm)
+                  if old is None or n < old[0]:
+                      best[pid][perm] = (n, canon, source)
+
+          output = []
+          disagreement = []
+          source_used = Counter()
+          total = 0
+          for pid in range(1003):
+              if not votes[pid]:
+                  raise RuntimeError(f'No candidates for id={pid}')
+              # Correct target is the modal resulting permutation across independently supplied CSVs.
+              perm, cnt = max(votes[pid].items(), key=lambda kv: (kv[1], -best[pid][kv[0]][0]))
+              n, canon, source = best[pid][perm]
+              total += n
+              source_used[source] += 1
+              output.append((pid, canon))
+              if len(votes[pid]) > 1:
+                  disagreement.append((pid, cnt, sum(votes[pid].values()), len(votes[pid]), n))
+
+          out = pathlib.Path('research-output')
+          out.mkdir(exist_ok=True)
+          with (out / 'public_merge.csv').open('w', encoding='utf-8', newline='') as f:
+              w = csv.writer(f, lineterminator='\n')
+              w.writerow(['initial_state_id', 'path'])
+              w.writerows(output)
+
+          report = {
+              'total_moves': total,
+              'rows': len(output),
+              'csv_files_scanned': scanned,
+              'csv_files_accepted': accepted_files,
+              'rows_with_disagreement': len(disagreement),
+              'top_sources_used': source_used.most_common(50),
+              'best_complete_like_sources': sorted(source_summaries, key=lambda x: (-x[0], x[1]))[:100],
+              'disagreement_sample': disagreement[:100],
+          }
+          (out / 'public_merge_report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+          (out / 'dataset_refs.txt').write_text(pathlib.Path('.tmp-ihes/all_refs.txt').read_text(), encoding='utf-8')
+          print(json.dumps(report, indent=2))
+          PY
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add research-output
+          if ! git diff --cached --quiet; then
+            git commit -m "data: persist IHES public merge"
+            git push origin HEAD:tmp-ihes-21840
+          fi
