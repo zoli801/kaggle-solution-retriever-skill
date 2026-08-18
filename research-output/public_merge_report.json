@@ -1,0 +1,528 @@
+{
+  "total_moves": 22292,
+  "rows": 1003,
+  "csv_files_scanned": 726,
+  "csv_files_accepted": 349,
+  "rows_with_disagreement": 0,
+  "top_sources_used": [
+    [
+      "olegpushs__sub-ihes/submission (10).csv",
+      984
+    ],
+    [
+      "olegpushs__sub-ihes/submission.csv",
+      13
+    ],
+    [
+      "olegpushs__sub-ihes/submission_r (54).csv",
+      4
+    ],
+    [
+      "olegpushs__sub-ihes/submission_r (50).csv",
+      2
+    ]
+  ],
+  "best_complete_like_sources": [
+    [
+      1003,
+      22294,
+      "olegpushs__sub-ihes/submission_r (54).csv"
+    ],
+    [
+      1003,
+      22300,
+      "olegpushs__sub-ihes/submission.csv"
+    ],
+    [
+      1003,
+      22330,
+      "olegpushs__sub-ihes/submission_r (50).csv"
+    ],
+    [
+      1003,
+      22332,
+      "olegpushs__sub-ihes/submission (10).csv"
+    ],
+    [
+      1003,
+      22496,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_22496_Cheldieva.csv"
+    ],
+    [
+      1003,
+      22526,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_22526_Cheldieva.csv"
+    ],
+    [
+      1003,
+      22700,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_22700_Cheldieva_beams24_25partly.csv"
+    ],
+    [
+      1003,
+      23088,
+      "arabidopsisthalian__subm-from-s-to-24/submission 23088 V2.csv"
+    ],
+    [
+      1003,
+      23246,
+      "arabidopsisthalian__subm-from-s-to-24/submission_r (6).csv"
+    ],
+    [
+      1003,
+      23292,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_ 23286_Cheldieva_fromB9_toB24_nrd10.csv"
+    ],
+    [
+      1003,
+      23302,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_ 23302_Part2p24_part2p22.csv"
+    ],
+    [
+      1003,
+      23338,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p24_full/submission_23338_beam2p24.csv"
+    ],
+    [
+      1003,
+      23338,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_23338_beam2p24.csv"
+    ],
+    [
+      1003,
+      23392,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_ 23392_beam2p22merge1234and960beam2p24merge20.csv"
+    ],
+    [
+      1003,
+      23426,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_beam2p22_merge1234trials_23426.csv"
+    ],
+    [
+      1003,
+      23426,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_23426_beam2p22_merge4.csv"
+    ],
+    [
+      1003,
+      23574,
+      "olegpushs__marged-2025-11-14/submission (5).csv"
+    ],
+    [
+      1003,
+      23574,
+      "olegpushs__marged-2025-11-14/submission (4).csv"
+    ],
+    [
+      1003,
+      23676,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_beam2p22_merged2and3trials.csv"
+    ],
+    [
+      1003,
+      23820,
+      "olegpushs__marged-2025-11-14/submission (6).csv"
+    ],
+    [
+      1003,
+      23820,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_beam2p22.csv"
+    ],
+    [
+      1003,
+      23820,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p22_full/submission_23820_beam2p22.csv"
+    ],
+    [
+      1003,
+      23836,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_beam2p22_trial4.csv"
+    ],
+    [
+      1003,
+      23836,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p22_full/submission_23836_beam2p22_trial4.csv"
+    ],
+    [
+      1003,
+      23876,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p22_full/submission_23876_beam2p22_trial2.csv"
+    ],
+    [
+      1003,
+      23890,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p22_full/submission_23890_beam2p22_trial3.csv"
+    ],
+    [
+      1003,
+      23946,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_23946_beam2p20_merge4.csv"
+    ],
+    [
+      1003,
+      24424,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p20_full/submission_24424_beam2p20_run1.csv"
+    ],
+    [
+      1003,
+      24432,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p20_full/submission_24432_beam2p20_run3.csv"
+    ],
+    [
+      1003,
+      24448,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p20_full/submission_24448_beam2p20_run4.csv"
+    ],
+    [
+      1003,
+      24454,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p20_full/submission_24454_beam2p20_run2.csv"
+    ],
+    [
+      1003,
+      24602,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_24602_beam2p18_merge4.csv"
+    ],
+    [
+      1003,
+      25164,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p18_full/submission_ 25164_beam2p18_run3.csv"
+    ],
+    [
+      1003,
+      25210,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p18_full/submission_ 25210_B2p18_run1.csv"
+    ],
+    [
+      1003,
+      25246,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p18_full/submission_ 25246_B2p18_run2.csv"
+    ],
+    [
+      1003,
+      25246,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p18_full/submission_ 25246_beam2p18_run4.csv"
+    ],
+    [
+      1003,
+      25384,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_25384_beam2p16_merge4.csv"
+    ],
+    [
+      1003,
+      27142,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p16_full/submission (29).csv"
+    ],
+    [
+      1003,
+      28182,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p16_full/submission (31).csv"
+    ],
+    [
+      1003,
+      28852,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p16_full/submission (28).csv"
+    ],
+    [
+      1003,
+      29914,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p16_full/submission (30).csv"
+    ],
+    [
+      1003,
+      30914,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_30914_beam2p14_merge4.csv"
+    ],
+    [
+      1003,
+      44200,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p14_full/submission (33).csv"
+    ],
+    [
+      1003,
+      51030,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p14_full/submission (32).csv"
+    ],
+    [
+      1003,
+      52488,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p14_full/submission (35).csv"
+    ],
+    [
+      1003,
+      52620,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p14_full/submission (34).csv"
+    ],
+    [
+      1003,
+      53904,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_53904_beam2p12_merge4.csv"
+    ],
+    [
+      1003,
+      88486,
+      "arabidopsisthalian__subm-from-s-to-24/submission_r.csv"
+    ],
+    [
+      1003,
+      90256,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_90256_beam2p10_merge4.csv"
+    ],
+    [
+      1003,
+      111758,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p12_full/submission (38).csv"
+    ],
+    [
+      1003,
+      114434,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p12_full/submission (37).csv"
+    ],
+    [
+      1003,
+      115832,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p12_full/submission (36).csv"
+    ],
+    [
+      1003,
+      117238,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p12_full/submission (39).csv"
+    ],
+    [
+      1003,
+      192110,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_192110_beam2p8_merge4.csv"
+    ],
+    [
+      1003,
+      205218,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p10_full/submission (43).csv"
+    ],
+    [
+      1003,
+      217868,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p10_full/submission (42).csv"
+    ],
+    [
+      1003,
+      219756,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p10_full/submission (41).csv"
+    ],
+    [
+      1003,
+      236504,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p10_full/submission (40).csv"
+    ],
+    [
+      1003,
+      364536,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p8_full/submission (48).csv"
+    ],
+    [
+      1003,
+      365512,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p8_full/submission (50).csv"
+    ],
+    [
+      1003,
+      366914,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p8_full/submission (51).csv"
+    ],
+    [
+      1003,
+      385330,
+      "alexandervc__cayleypy-submissions/IhesCube_beam2p8_full/submission (49).csv"
+    ],
+    [
+      1003,
+      386978,
+      "alexandervc__cayleypy-submissions/IhesCube_full_submits/submission_386978_beam2p6_merge4.csv"
+    ],
+    [
+      1003,
+      405414,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run3/submission (13).csv"
+    ],
+    [
+      1003,
+      405420,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run1/submission (17).csv"
+    ],
+    [
+      1003,
+      405430,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run2/submission (17).csv"
+    ],
+    [
+      1003,
+      405436,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run4/submission (16).csv"
+    ],
+    [
+      1003,
+      418344,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run3/submission (15).csv"
+    ],
+    [
+      1003,
+      418346,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run1/submission (9).csv"
+    ],
+    [
+      1003,
+      418348,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run4/submission (10).csv"
+    ],
+    [
+      1003,
+      418354,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run2/submission (11).csv"
+    ],
+    [
+      1003,
+      428332,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run4/submission (8).csv"
+    ],
+    [
+      1003,
+      428334,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run2/submission (12).csv"
+    ],
+    [
+      1003,
+      428336,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run3/submission (17).csv"
+    ],
+    [
+      1003,
+      428342,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run1/submission (8).csv"
+    ],
+    [
+      1003,
+      438320,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run2/submission (15).csv"
+    ],
+    [
+      1003,
+      438320,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run1/submission (10).csv"
+    ],
+    [
+      1003,
+      438324,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run4/submission (15).csv"
+    ],
+    [
+      1003,
+      438324,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run3/submission (8).csv"
+    ],
+    [
+      1003,
+      448328,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run2/submission (13).csv"
+    ],
+    [
+      1003,
+      448328,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run1/submission (16).csv"
+    ],
+    [
+      1003,
+      448338,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run4/submission (14).csv"
+    ],
+    [
+      1003,
+      448338,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run3/submission (14).csv"
+    ],
+    [
+      1003,
+      458320,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run2/submission (10).csv"
+    ],
+    [
+      1003,
+      458324,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run1/submission (14).csv"
+    ],
+    [
+      1003,
+      458324,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run3/submission (16).csv"
+    ],
+    [
+      1003,
+      458336,
+      "alexandervc__cayleypy-submits-parts/IhesCube_beam2p20_run4/submission (11).csv"
+    ],
+    [
+      1003,
+      459540,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v32.csv"
+    ],
+    [
+      1003,
+      459540,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v9.csv"
+    ],
+    [
+      1003,
+      459542,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v16.csv"
+    ],
+    [
+      1003,
+      459544,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v11.csv"
+    ],
+    [
+      1003,
+      459544,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v5.csv"
+    ],
+    [
+      1003,
+      459544,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v25.csv"
+    ],
+    [
+      1003,
+      459544,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v22.csv"
+    ],
+    [
+      1003,
+      459546,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v21.csv"
+    ],
+    [
+      1003,
+      459546,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v19.csv"
+    ],
+    [
+      1003,
+      459546,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v30.csv"
+    ],
+    [
+      1003,
+      459546,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v2.csv"
+    ],
+    [
+      1003,
+      459546,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v31.csv"
+    ],
+    [
+      1003,
+      459546,
+      "alexandervc__cayleypy-submissions/IhesCube_Shift960_Num43_beam2p24/submission_2_24_v10.csv"
+    ]
+  ],
+  "disagreement_sample": []
+}
