@@ -1,0 +1,111 @@
+name: IHES Kaggle dataset recovery
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-kaggle-datasets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve and download auxiliary public datasets
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p recovered/search recovered/downloads
+
+          python - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          target_ids = {7439288, 8732146, 8713865, 8731672}
+          queries = [
+              'marged-2025-11-14',
+              'subm-from-s-to-24',
+              'submission_marged',
+              'submission 23088 V2',
+              'cayleypy',
+              'ihes cube',
+          ]
+          headers = {'User-Agent':'Mozilla/5.0','Accept':'application/json,*/*'}
+          out = Path('recovered/search')
+          found = {}
+          for q in queries:
+              url = 'https://www.kaggle.com/api/v1/datasets/list?search=' + urllib.parse.quote(q)
+              req = urllib.request.Request(url, headers=headers)
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  body = r.read()
+              safe = ''.join(ch if ch.isalnum() else '_' for ch in q)
+              (out/f'{safe}.json').write_bytes(body)
+              try:
+                  rows = json.loads(body)
+              except Exception:
+                  rows = []
+              for row in rows:
+                  rid = row.get('id')
+                  ref = row.get('ref')
+                  if isinstance(rid, int) and ref:
+                      found[rid] = ref
+              print(q, [(r.get('id'),r.get('ref'),r.get('title')) for r in rows[:20]])
+
+          # Direct views of every resolved ref preserve version metadata.
+          for rid, ref in sorted(found.items()):
+              if rid not in target_ids:
+                  continue
+              url = 'https://www.kaggle.com/api/v1/datasets/view/' + ref
+              req = urllib.request.Request(url, headers=headers)
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  body = r.read()
+              (out/f'view_{rid}.json').write_bytes(body)
+
+          resolved = {rid:ref for rid,ref in found.items() if rid in target_ids}
+          (out/'resolved.json').write_text(json.dumps(resolved,indent=2,sort_keys=True))
+          missing = sorted(target_ids-set(resolved))
+          print('resolved',resolved,'missing',missing)
+          PY
+
+          python - <<'PY'
+          import json
+          import urllib.request
+          from pathlib import Path
+
+          resolved = json.loads(Path('recovered/search/resolved.json').read_text())
+          headers = {'User-Agent':'Mozilla/5.0','Accept':'application/zip,*/*'}
+          status=[]
+          for rid_s, ref in resolved.items():
+              rid=int(rid_s)
+              owner,slug=ref.split('/',1)
+              url=f'https://www.kaggle.com/api/v1/datasets/download/{owner}/{slug}'
+              target=Path('recovered/downloads')/f'{rid}__{owner}__{slug}.zip'
+              req=urllib.request.Request(url,headers=headers)
+              try:
+                  with urllib.request.urlopen(req,timeout=600) as r, target.open('wb') as f:
+                      while True:
+                          chunk=r.read(1024*1024)
+                          if not chunk: break
+                          f.write(chunk)
+                  status.append({'id':rid,'ref':ref,'url':url,'size':target.stat().st_size,'ok':True})
+              except Exception as e:
+                  status.append({'id':rid,'ref':ref,'url':url,'error':repr(e),'ok':False})
+              print(status[-1])
+          Path('recovered/downloads/status.json').write_text(json.dumps(status,indent=2))
+          PY
+
+          find recovered -type f -print0 | sort -z | xargs -0 sha256sum > recovered/SHA256SUMS.txt
+
+      - name: Upload auxiliary dataset recovery
+        uses: actions/upload-artifact@v4
+        with:
+          name: ihes-kaggle-aux-datasets
+          path: recovered
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 7

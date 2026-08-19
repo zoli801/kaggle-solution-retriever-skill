@@ -1,0 +1,80 @@
+name: IHES repository history recovery
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Search all public refs and historical blobs
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p recovered/repos recovered/reports recovered/files
+
+          for repo in \
+            https://github.com/Erlemar/cayley-solvers.git \
+            https://github.com/TryDotAtwo/MultiGPUBeamSearch.git \
+            https://github.com/TryDotAtwo/cayleypy-beam-results.git; do
+            name="$(basename "${repo}" .git)"
+            git clone --no-single-branch "${repo}" "recovered/repos/${name}"
+            cd "recovered/repos/${name}"
+            git fetch --all --tags --prune
+            git branch -a > "../../reports/${name}_branches.txt"
+            git tag -l > "../../reports/${name}_tags.txt"
+            git log --all --date=iso --pretty=format:'%H%x09%ad%x09%s' --name-status \
+              > "../../reports/${name}_full_log.txt"
+            git rev-list --objects --all \
+              | grep -Ei '21870|21872|public_218|submission' \
+              > "../../reports/${name}_matching_objects.txt" || true
+            git log --all -S'public_21872' --date=iso --pretty=fuller -p \
+              > "../../reports/${name}_pickaxe_public21872.txt" || true
+            git log --all -S'submission _21870' --date=iso --pretty=fuller -p \
+              > "../../reports/${name}_pickaxe_21870.txt" || true
+            git log --all -S'21,872' --date=iso --pretty=fuller -p \
+              > "../../reports/${name}_pickaxe_21872_score.txt" || true
+            git log --all -S'21,870' --date=iso --pretty=fuller -p \
+              > "../../reports/${name}_pickaxe_21870_score.txt" || true
+
+            # Recover any historical blob whose path itself names either target.
+            while read -r sha path; do
+              [ -n "${sha:-}" ] || continue
+              if printf '%s' "${path:-}" | grep -Eiq '21870|21872|public_218'; then
+                safe="$(printf '%s' "${name}__${sha}__${path}" | tr '/ ' '__')"
+                git cat-file -p "${sha}" > "../../files/${safe}" || true
+              fi
+            done < <(git rev-list --objects --all)
+
+            # Search textual blobs for CSV headers plus target scores/references.
+            git rev-list --objects --all | while read -r sha path; do
+              type="$(git cat-file -t "${sha}" 2>/dev/null || true)"
+              [ "${type}" = blob ] || continue
+              size="$(git cat-file -s "${sha}" 2>/dev/null || echo 999999999)"
+              [ "${size}" -le 5000000 ] || continue
+              if git cat-file -p "${sha}" 2>/dev/null | grep -Eaq '21870|21872|21,870|21,872|initial_state_id,path'; then
+                printf '%s\t%s\t%s\n' "${sha}" "${size}" "${path:-}" \
+                  >> "../../reports/${name}_text_blob_hits.tsv"
+              fi
+            done
+            cd - >/dev/null
+          done
+
+          rm -rf recovered/repos
+          find recovered -type f -print0 | sort -z | xargs -0 sha256sum > recovered/SHA256SUMS.txt
+
+      - name: Upload history recovery
+        uses: actions/upload-artifact@v4
+        with:
+          name: ihes-history-recovery
+          path: recovered
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 7

@@ -1,0 +1,69 @@
+name: IHES public artifact recovery
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out helper repository
+        uses: actions/checkout@v4
+
+      - name: Collect compact IHES artifacts
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p recovered/ihes_release recovered/public_results recovered/writeups
+
+          gh release download ihes-p888-model \
+            --repo TryDotAtwo/MultiGPUBeamSearch \
+            --pattern cayleypy-ihes-cube.zip \
+            --dir recovered/ihes_release \
+            --clobber
+          unzip -o recovered/ihes_release/cayleypy-ihes-cube.zip \
+            -d recovered/ihes_release/unpacked
+
+          curl -L --fail --retry 3 \
+            https://raw.githubusercontent.com/TryDotAtwo/MultiGPUBeamSearch/main/hpc/ihes_cube_model/solv_uniq.csv \
+            -o recovered/solv_uniq.json
+
+          git clone --depth=1 \
+            https://github.com/TryDotAtwo/cayleypy-beam-results.git \
+            recovered/public_results/repo
+          rm -rf recovered/public_results/repo/.git
+
+          curl -L --fail --retry 3 -A 'Mozilla/5.0' \
+            https://www.kaggle.com/competitions/santa-2023/writeups/kmcoders-1st-place-solution \
+            -o recovered/writeups/kmcoders.html
+          curl -L --fail --retry 3 -A 'Mozilla/5.0' \
+            https://www.kaggle.com/competitions/santa-2023/writeups/preferredsantaclaus-2nd-place-solution \
+            -o recovered/writeups/preferredsantaclaus.html
+          curl -L --fail --retry 3 -A 'Mozilla/5.0' \
+            https://www.kaggle.com/competitions/santa-2023/writeups/nagiss-newtonians-3rd-place-solution \
+            -o recovered/writeups/nagiss-newtonians.html
+          curl -L --fail --retry 3 -A 'Mozilla/5.0' \
+            https://www.kaggle.com/competitions/santa-2023/writeups/always-day-zero-16th-place-solution-for-santa-2023 \
+            -o recovered/writeups/always-day-zero.html
+
+          find recovered -type f -print0 | sort -z | xargs -0 sha256sum > recovered/SHA256SUMS.txt
+          python - <<'PY'
+          from pathlib import Path
+          root = Path('recovered')
+          rows = sorted(((p.stat().st_size, str(p)) for p in root.rglob('*') if p.is_file()), reverse=True)
+          Path('recovered/largest_files.txt').write_text(''.join(f'{n} {p}\n' for n, p in rows[:200]))
+          PY
+
+      - name: Upload compact recovery bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ihes-compact-recovery
+          path: recovered
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 7

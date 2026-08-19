@@ -1,0 +1,115 @@
+name: IHES Kaggle public corpus recovery
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-public-corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download public artifacts, kernel metadata, and bounded outputs
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p recovered/api recovered/datasets recovered/kernel_outputs
+
+          python - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          headers={'User-Agent':'Mozilla/5.0','Accept':'application/json,*/*'}
+          api=Path('recovered/api')
+          urls={
+            'datasets_21872':'https://www.kaggle.com/api/v1/datasets/list?search=21872',
+            'datasets_21870':'https://www.kaggle.com/api/v1/datasets/list?search=21870',
+            'datasets_ihes_cube':'https://www.kaggle.com/api/v1/datasets/list?search=ihes%20cube',
+            'datasets_cayleypy_ihes':'https://www.kaggle.com/api/v1/datasets/list?search=cayleypy%20ihes',
+            'kernels_search_ihes':'https://www.kaggle.com/api/v1/kernels/list?search=cayleypy%20ihes&page=1&pageSize=100',
+            'kernels_competition':'https://www.kaggle.com/api/v1/kernels/list?competition=cayleypy-ihes-cube&page=1&pageSize=100',
+            'kernels_artgor':'https://www.kaggle.com/api/v1/kernels/list?user=artgor&search=ihes&page=1&pageSize=100',
+            'view_sym_dataset':'https://www.kaggle.com/api/v1/datasets/view/artgor/ihes-cube-tpu-artifacts',
+          }
+          for name,url in urls.items():
+            req=urllib.request.Request(url,headers=headers)
+            try:
+              with urllib.request.urlopen(req,timeout=180) as r:
+                body=r.read(); status=r.status; final=r.geturl(); hdr=dict(r.headers)
+            except Exception as e:
+              body=repr(e).encode(); status=None; final=url; hdr={}
+            (api/f'{name}.body').write_bytes(body)
+            (api/f'{name}.meta.json').write_text(json.dumps({'url':url,'final':final,'status':status,'size':len(body),'headers':hdr},indent=2,sort_keys=True))
+            print(name,status,len(body),body[:200])
+          PY
+
+          # Symmetry/model artifact dataset; the symmetry arrays are tiny even if the checkpoint is not.
+          curl -L --fail --retry 3 -A 'Mozilla/5.0' \
+            https://www.kaggle.com/api/v1/datasets/download/artgor/ihes-cube-tpu-artifacts \
+            -o recovered/datasets/artgor__ihes-cube-tpu-artifacts.zip
+
+          python - <<'PY'
+          import json, urllib.request
+          from pathlib import Path
+
+          known=[
+            'artgor/cayleypy-ihes-cube-tpu-beam',
+            'artgor/cayleypy-ihes-gfn-beam',
+            'artgor/cayleypy-ihes-supercube-baseline',
+            'alexandervc/cayleypy-automerge-b483ab',
+          ]
+          # Add refs from every successful kernels/list response.
+          for p in Path('recovered/api').glob('kernels_*.body'):
+            try: rows=json.loads(p.read_text())
+            except Exception: continue
+            if isinstance(rows,dict): rows=rows.get('items') or rows.get('kernels') or rows.get('results') or []
+            for r in rows if isinstance(rows,list) else []:
+              ref=r.get('ref') or r.get('kernelRef') or r.get('id')
+              if isinstance(ref,str) and 'ihes' in ref.lower() and 'trainer' not in ref.lower(): known.append(ref)
+          known=list(dict.fromkeys(known))
+          Path('recovered/api/kernel_refs.json').write_text(json.dumps(known,indent=2))
+
+          headers={'User-Agent':'Mozilla/5.0','Accept':'application/zip,*/*'}
+          status=[]; total=0; total_cap=600_000_000; per_cap=150_000_000
+          for ref in known:
+            if '/' not in ref: continue
+            owner,slug=ref.split('/',1)
+            url=f'https://www.kaggle.com/api/v1/kernels/output/{owner}/{slug}'
+            target=Path('recovered/kernel_outputs')/f'{owner}__{slug}.zip'
+            try:
+              req=urllib.request.Request(url,headers=headers)
+              with urllib.request.urlopen(req,timeout=600) as r, target.open('wb') as f:
+                n=0
+                while True:
+                  chunk=r.read(1024*1024)
+                  if not chunk: break
+                  n+=len(chunk)
+                  if n>per_cap or total+n>total_cap:
+                    raise RuntimeError(f'bounded output cap exceeded at {n}')
+                  f.write(chunk)
+              total+=n
+              status.append({'ref':ref,'ok':True,'size':n,'url':url})
+            except Exception as e:
+              target.unlink(missing_ok=True)
+              status.append({'ref':ref,'ok':False,'error':repr(e),'url':url})
+            print(status[-1])
+          Path('recovered/kernel_outputs/status.json').write_text(json.dumps(status,indent=2))
+          PY
+
+          find recovered -type f -print0 | sort -z | xargs -0 sha256sum > recovered/SHA256SUMS.txt
+
+      - name: Upload public corpus recovery
+        uses: actions/upload-artifact@v4
+        with:
+          name: ihes-kaggle-public-corpus
+          path: recovered
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 7
