@@ -1,0 +1,93 @@
+name: q2-harvest
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/q2-harvest.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  harvest-all-public-versions-throttled:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -q "kagglehub>=1.0.1" "numpy>=1.26" requests
+      - name: Recover the exact harvester from the successful first pass
+        uses: actions/download-artifact@v4
+        with:
+          name: q2-all-versions-result
+          path: prior
+          github-token: ${{ github.token }}
+          repository: zoli801/kaggle-solution-retriever-skill
+          run-id: 32246435117
+      - name: Add deterministic throttling and retry handling
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          src = Path("prior/q2_harvest_full.py")
+          text = src.read_text(encoding="utf-8")
+          marker = "import requests\n"
+          patch = r'''
+          import requests
+          import time
+
+          _original_notebook_output_download = kagglehub.notebook_output_download
+
+          def _throttled_notebook_output_download(*args, **kwargs):
+              last = None
+              for attempt in range(12):
+                  try:
+                      value = _original_notebook_output_download(*args, **kwargs)
+                      time.sleep(1.25)
+                      return value
+                  except Exception as exc:  # noqa: BLE001
+                      last = exc
+                      if attempt == 11:
+                          raise
+                      message = str(exc).lower()
+                      base = 8.0 if ("429" in message or "too many requests" in message) else 3.0
+                      factor = 1.65 if base == 8.0 else 1.5
+                      delay = min(180.0, base * (factor ** attempt)) + (attempt % 5) * 0.17
+                      print(
+                          f"download retry {attempt + 1}/11 after {type(exc).__name__}; "
+                          f"sleep={delay:.1f}s",
+                          flush=True,
+                      )
+                      time.sleep(delay)
+              raise last  # pragma: no cover
+
+          kagglehub.notebook_output_download = _throttled_notebook_output_download
+          '''.lstrip()
+          if marker not in text:
+              raise SystemExit("patch marker not found")
+          text = text.replace(marker, patch, 1)
+          Path("q2_harvest_full_retry.py").write_text(text, encoding="utf-8")
+          PY
+          python -m py_compile q2_harvest_full_retry.py
+      - name: Parse, validate, blend, and revalidate versions 1 through 179
+        shell: bash
+        run: |
+          set -o pipefail
+          python q2_harvest_full_retry.py --max-version 179 --out-dir q2_result --work-dir q2_work --workers 1 2>&1 | tee q2_run.log
+      - name: Upload result bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: q2-all-179-versions-throttled-result
+          path: |
+            q2_result/
+            q2_run.log
+            q2_harvest_full_retry.py
+          if-no-files-found: warn
+          retention-days: 1
