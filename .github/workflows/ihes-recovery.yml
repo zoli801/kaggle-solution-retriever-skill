@@ -1,0 +1,51 @@
+name: IHES public artifact recovery
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out helper repository
+        uses: actions/checkout@v4
+
+      - name: Collect public IHES solver repositories and data
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p recovered
+          git clone --depth=1 https://github.com/TryDotAtwo/MultiGPUBeamSearch.git recovered/MultiGPUBeamSearch
+          git clone --depth=1 https://github.com/Erlemar/cayley-solvers.git recovered/cayley-solvers
+          rm -rf recovered/MultiGPUBeamSearch/.git recovered/cayley-solvers/.git
+
+          mkdir -p recovered/direct
+          curl -L --fail --retry 3 \
+            https://raw.githubusercontent.com/TryDotAtwo/MultiGPUBeamSearch/main/data/test.csv \
+            -o recovered/direct/test.csv
+          curl -L --fail --retry 3 \
+            https://raw.githubusercontent.com/TryDotAtwo/MultiGPUBeamSearch/main/data/puzzle_info.json \
+            -o recovered/direct/puzzle_info.json
+          curl -L --fail --retry 3 \
+            https://raw.githubusercontent.com/TryDotAtwo/MultiGPUBeamSearch/main/data/sample_submission.csv \
+            -o recovered/direct/sample_submission.csv
+          curl -L --fail --retry 3 \
+            https://raw.githubusercontent.com/TryDotAtwo/MultiGPUBeamSearch/main/hpc/ihes_cube_model/solv_uniq.csv \
+            -o recovered/direct/solv_uniq.csv
+
+          sha256sum recovered/direct/* | tee recovered/SHA256SUMS.txt
+          find recovered -maxdepth 4 -type f -printf '%s %p\n' | sort -nr | head -100 > recovered/largest_files.txt
+
+      - name: Upload recovered public files
+        uses: actions/upload-artifact@v4
+        with:
+          name: ihes-public-recovery
+          path: recovered
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 7
