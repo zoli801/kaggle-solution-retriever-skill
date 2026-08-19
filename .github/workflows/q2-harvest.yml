@@ -1,0 +1,35 @@
+name: q2-harvest
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/q2-harvest.yml"
+      - "tools/q2_harvest_probe.py"
+
+permissions:
+  contents: read
+
+jobs:
+  probe-public-kaggle-output:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install public client
+        run: python -m pip install --disable-pip-version-check -q "kagglehub>=0.3.12"
+      - name: Probe latest and version 1
+        run: python tools/q2_harvest_probe.py
+      - name: Upload probe output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: q2-harvest-probe
+          path: |
+            harvest_probe_report.json
+            harvest_probe/
+          if-no-files-found: warn
+          retention-days: 1
