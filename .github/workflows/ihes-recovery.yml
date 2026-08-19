@@ -24,7 +24,7 @@ jobs:
           git clone --depth=1 https://github.com/Erlemar/cayley-solvers.git recovered/cayley-solvers
           rm -rf recovered/MultiGPUBeamSearch/.git recovered/cayley-solvers/.git
 
-          mkdir -p recovered/direct
+          mkdir -p recovered/direct recovered/ihes_release
           curl -L --fail --retry 3 \
             https://raw.githubusercontent.com/TryDotAtwo/MultiGPUBeamSearch/main/data/test.csv \
             -o recovered/direct/test.csv
@@ -38,13 +38,21 @@ jobs:
             https://raw.githubusercontent.com/TryDotAtwo/MultiGPUBeamSearch/main/hpc/ihes_cube_model/solv_uniq.csv \
             -o recovered/direct/solv_uniq.csv
 
-          sha256sum recovered/direct/* | tee recovered/SHA256SUMS.txt
-          find recovered -maxdepth 4 -type f -printf '%s %p\n' | sort -nr | head -100 > recovered/largest_files.txt
+          gh release download ihes-p888-model \
+            --repo TryDotAtwo/MultiGPUBeamSearch \
+            --pattern cayleypy-ihes-cube.zip \
+            --dir recovered/ihes_release \
+            --clobber
+          unzip -o recovered/ihes_release/cayleypy-ihes-cube.zip \
+            -d recovered/ihes_release/unpacked
+
+          find recovered -type f -print0 | sort -z | xargs -0 sha256sum > recovered/SHA256SUMS.txt
+          find recovered -maxdepth 5 -type f -printf '%s %p\n' | sort -nr | head -150 > recovered/largest_files.txt
 
       - name: Upload recovered public files
         uses: actions/upload-artifact@v4
         with:
-          name: ihes-public-recovery
+          name: ihes-public-recovery-with-data
           path: recovered
           if-no-files-found: error
           compression-level: 6
